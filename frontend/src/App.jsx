@@ -4,7 +4,7 @@ import StatsCards from './components/StatsCards';
 import ClaimsList from './components/ClaimsList';
 import CreateClaimModal from './components/CreateClaimModal';
 import ClaimDetailModal from './components/ClaimDetailModal';
-import LoginModal from './components/LoginModal';
+import LoginScreen from './components/LoginScreen';
 import Toast from './components/Toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -18,7 +18,7 @@ export default function App() {
   // Officer Auth State
   const [officer, setOfficer] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('officer_token') || null);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(Boolean(localStorage.getItem('officer_token')));
 
   // Pagination & Filter state
   const [page, setPage] = useState(1);
@@ -42,6 +42,7 @@ export default function App() {
   // Restore Officer session on startup if token exists
   useEffect(() => {
     if (token) {
+      setIsCheckingAuth(true);
       fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -53,7 +54,10 @@ export default function App() {
             handleLogout();
           }
         })
-        .catch(() => handleLogout());
+        .catch(() => handleLogout())
+        .finally(() => setIsCheckingAuth(false));
+    } else {
+      setIsCheckingAuth(false);
     }
   }, [token]);
 
@@ -98,6 +102,8 @@ export default function App() {
    * Fetch Claims with pagination and filters
    */
   const fetchClaims = useCallback(async (quiet = false) => {
+    if (!token && !officer) return;
+
     if (!quiet) setIsLoading(true);
     else setIsRefreshing(true);
 
@@ -136,11 +142,13 @@ export default function App() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [page, limit, selectedStatus, selectedType, searchQuery, token]);
+  }, [page, limit, selectedStatus, selectedType, searchQuery, token, officer]);
 
   useEffect(() => {
-    fetchClaims();
-  }, [fetchClaims]);
+    if (officer) {
+      fetchClaims();
+    }
+  }, [fetchClaims, officer]);
 
   // Reset to page 1 when search or filter changes
   useEffect(() => {
@@ -210,12 +218,33 @@ export default function App() {
     }
   };
 
+  // 1. Loading Auth Session State
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-jubilee-navy flex flex-col items-center justify-center text-white p-4">
+        <div className="w-10 h-10 border-4 border-jubilee-red border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-sm font-semibold text-slate-300">Verifying Officer Session...</p>
+      </div>
+    );
+  }
+
+  // 2. Unauthenticated Gate -> Render Full Page Login Screen
+  if (!officer) {
+    return (
+      <>
+        <LoginScreen onLogin={handleLogin} />
+        <Toast toast={toast} onClose={() => setToast(null)} />
+      </>
+    );
+  }
+
+  // 3. Authenticated Officer Dashboard View
   return (
     <div className="min-h-screen bg-jubilee-lightBg flex flex-col font-sans text-slate-800">
       {/* Header */}
       <Header
         officer={officer}
-        onOpenLoginModal={() => setIsLoginModalOpen(true)}
+        onOpenLoginModal={() => {}}
         onLogout={handleLogout}
         onOpenCreateModal={() => setIsCreateModalOpen(true)}
         onRefresh={() => fetchClaims(true)}
@@ -235,21 +264,12 @@ export default function App() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {officer ? (
-              <button
-                onClick={handleLogout}
-                className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white px-3.5 py-2 rounded-xl text-xs font-semibold border border-rose-800 transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                Log Out Session
-              </button>
-            ) : (
-              <button
-                onClick={() => setIsLoginModalOpen(true)}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
-              >
-                Officer Login
-              </button>
-            )}
+            <button
+              onClick={handleLogout}
+              className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white px-3.5 py-2 rounded-xl text-xs font-semibold border border-rose-800 transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              Log Out Session
+            </button>
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="bg-jubilee-red hover:bg-jubilee-redHover text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-lg transition-all transform active:scale-95 whitespace-nowrap cursor-pointer"
@@ -282,12 +302,6 @@ export default function App() {
       </main>
 
       {/* Modals & Drawers */}
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        onLogin={handleLogin}
-      />
-
       <CreateClaimModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}

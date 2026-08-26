@@ -10,7 +10,7 @@ A clean, production-ready Full Stack Insurance Claims Tracking web application d
 - [Prerequisites](#-prerequisites)
 - [Project Architecture](#-project-architecture)
 - [Installation & Setup](#-installation--setup)
-- [Claims Officer Authentication](#-claims-officer-authentication)
+- [Claims Officer Authentication Gate](#-claims-officer-authentication-gate)
 - [Database Setup & Seeding](#-database-setup--seeding)
 - [How to Run Frontend & Backend](#-how-to-run-frontend--backend)
 - [Minimum API Specification & Pagination](#-minimum-api-specification--pagination)
@@ -58,10 +58,10 @@ jubilee-interview/
 │   │   │   ├── ClaimsList.jsx       # Interactive Data Table & Pagination Controls
 │   │   │   ├── CreateClaimModal.jsx # Claim Capture Form Modal
 │   │   │   ├── ClaimDetailModal.jsx # Detail Drawer & Status Confirmation Dialog
-│   │   │   ├── LoginModal.jsx       # Officer Login Modal
+│   │   │   ├── LoginScreen.jsx      # Full-Page Protected Login Gateway
 │   │   │   ├── StatusBadge.jsx      # Color-Coded Status Pills
 │   │   │   └── Toast.jsx            # Notification Banners
-│   │   ├── App.jsx                  # Main State Container & API Service Calls
+│   │   ├── App.jsx                  # Main State Container & Authentication Gate
 │   │   └── index.css
 │   ├── index.html
 │   ├── vite.config.js
@@ -128,18 +128,20 @@ npm install
 
 ---
 
-## 🔐 Claims Officer Authentication
+## 🔐 Claims Officer Authentication Gate
 
-The application features basic JWT authentication for Claims Officers:
+The application enforces a **Protected Authentication Gate**:
 
-1. **Environment-Based Officer Credentials**:
+1. **Full-Page Login Redirection**:
+   - Unauthenticated users cannot view the claims table, statistics, or incident details. Loading the application directs users straight to the **Claims Officer Login Screen**.
+2. **Environment-Based Officer Credentials**:
    - `OFFICER_USERNAME` (e.g. `officer@jubilee.com`)
    - `OFFICER_PASSWORD` (e.g. `Jubilee2026!`)
-2. **Seeding Officer User**:
+3. **Seeding Officer User**:
    - Running `npm run seed` in `backend/` creates or updates the Officer account in the PostgreSQL `officers` table using **Bcrypt password hashing**.
-3. **Authentication Flow**:
-   - **Login Endpoint**: `POST /api/auth/login` verifies credentials and returns a 24-hour JWT token.
-   - **Frontend Integration**: Officers can log in via the header/modal. The JWT token is saved in `localStorage` and automatically attached as a `Authorization: Bearer <token>` header on API requests.
+4. **Authentication Session**:
+   - Logging in issues a 24-hour JWT token stored in `localStorage`. Once authenticated, the full Claims Dashboard is revealed.
+   - Officers can click **Log Out** in the header or welcome banner to return to the login screen.
 
 ---
 
@@ -268,9 +270,10 @@ npm run dev
 
 ## 💡 Key Assumptions Made
 
-1. **Seeded Officer Credentials**: Claims Officers are initialized from `OFFICER_USERNAME` and `OFFICER_PASSWORD` environment variables in `backend/.env`. Running `npm run seed` populates or updates this user in PostgreSQL using Bcrypt hashing.
-2. **Server-Side Pagination**: Claims querying supports `page` and `limit` pagination parameters, returning total count metadata so the frontend can render responsive pagination controls (*Prev/Next*, *Page X of Y*, *Limit selector*).
-3. **Initial Status Handling**: All newly captured claims automatically receive the default status `'SUBMITTED'` upon creation in accordance with business requirements.
-4. **UUID Primary Keys**: Claims and Officers use PostgreSQL random UUID primary keys (`gen_random_uuid()`) rather than integer IDs for security, preventing identifier enumeration.
-5. **Claim Amount Validation**: Claim amounts are validated both client-side and server-side to ensure they are strictly positive numeric values (`claimAmount > 0`).
-6. **Two-Step Status Update Confirmation**: Clicking a status transition button opens an interactive confirmation dialog requiring explicit confirmation before invoking the backend API.
+1. **Protected Entry Gate**: The application blocks unauthenticated access to claims records. Upon initial load, users are directed to the login page (`LoginScreen.jsx`) and must log in as a Claims Officer before viewing the dashboard.
+2. **Seeded Officer Credentials**: Claims Officers are initialized from `OFFICER_USERNAME` and `OFFICER_PASSWORD` environment variables in `backend/.env`. Running `npm run seed` populates or updates this user in PostgreSQL using Bcrypt hashing.
+3. **Server-Side Pagination**: Claims querying supports `page` and `limit` pagination parameters, returning total count metadata so the frontend can render responsive pagination controls (*Prev/Next*, *Page X of Y*, *Limit selector*).
+4. **Initial Status Handling**: All newly captured claims automatically receive the default status `'SUBMITTED'` upon creation in accordance with business requirements.
+5. **UUID Primary Keys**: Claims and Officers use PostgreSQL random UUID primary keys (`gen_random_uuid()`) rather than integer IDs for security.
+6. **Claim Amount Validation**: Claim amounts are validated both client-side and server-side to ensure they are strictly positive numeric values (`claimAmount > 0`).
+7. **Two-Step Status Update Confirmation**: Clicking a status transition button opens an interactive confirmation dialog requiring explicit confirmation before invoking the backend API.
