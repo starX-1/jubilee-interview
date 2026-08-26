@@ -1,0 +1,24 @@
+{
+  "name": "jubilee-insurance-claims-tracker",
+  "version": "1.0.0",
+  "description": "Simple Insurance Claims Tracker for Jubilee Insurance Claims Officers",
+  "main": "backend/index.js",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "backend": "npm start --prefix backend",
+    "frontend": "npm run dev --prefix frontend",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "seed": "npm run seed --prefix backend"
+  },
+  "keywords": [
+    "jubilee-insurance",
+    "claims-tracker",
+    "express",
+    "react",
+    "tailwind",
+    "postgresql",
+    "neon-db"
+  ],
+  "author": "Full Stack Engineer Candidate",
+  "license": "MIT"
+}
