@@ -33,18 +33,23 @@ export default function Header({
         {/* Right Side Actions & Officer Profile */}
         <div className="flex items-center gap-3">
           {officer ? (
-            <div className="flex items-center gap-2.5 bg-slate-800/90 px-3 py-1.5 rounded-lg border border-slate-700/80 text-xs">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <div className="flex flex-col text-left">
-                <span className="text-white font-bold">{officer.fullName || 'Claims Officer'}</span>
-                <span className="text-[10px] text-slate-300 font-mono">{officer.username}</span>
+            <div className="flex items-center gap-3 bg-slate-800/90 px-3 py-1.5 rounded-lg border border-slate-700/80 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <div className="flex flex-col text-left">
+                  <span className="text-white font-bold">{officer.fullName || 'Claims Officer'}</span>
+                  <span className="text-[10px] text-slate-300 font-mono">{officer.username}</span>
+                </div>
               </div>
+
+              {/* Logout Button */}
               <button
                 onClick={onLogout}
-                className="ml-2 text-slate-400 hover:text-rose-400 p-1 rounded hover:bg-slate-700 transition-colors"
+                className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white px-2.5 py-1 rounded-md border border-rose-800/80 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ml-1"
                 title="Log Out Officer Session"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Log Out</span>
               </button>
             </div>
           ) : (

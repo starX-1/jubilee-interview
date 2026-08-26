@@ -235,7 +235,14 @@ export default function App() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {!officer && (
+            {officer ? (
+              <button
+                onClick={handleLogout}
+                className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white px-3.5 py-2 rounded-xl text-xs font-semibold border border-rose-800 transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                Log Out Session
+              </button>
+            ) : (
               <button
                 onClick={() => setIsLoginModalOpen(true)}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-700 transition-all cursor-pointer"

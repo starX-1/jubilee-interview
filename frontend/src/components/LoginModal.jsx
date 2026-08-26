@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ShieldCheck, User, Lock, AlertCircle, LogIn, KeyRound } from 'lucide-react';
+import { ShieldCheck, User, Lock, AlertCircle, LogIn, KeyRound, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginModal({ isOpen, onClose, onLogin }) {
-  const [username, setUsername] = useState('officer@jubilee.com');
-  const [password, setPassword] = useState('Jubilee2026!');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -21,6 +22,9 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
 
     try {
       await onLogin(username.trim(), password.trim());
+      // Reset form
+      setUsername('');
+      setPassword('');
       onClose();
     } catch (err) {
       setError(err.message || 'Login failed. Please check credentials.');
@@ -53,7 +57,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4" autoComplete="off">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
               <User className="w-3.5 h-3.5 text-slate-400" />
@@ -61,9 +65,11 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
             </label>
             <input
               type="text"
+              name="officer_username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="officer@jubilee.com"
+              placeholder="e.g. officer@jubilee.com"
+              autoComplete="off"
               className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-jubilee-red focus:ring-1 focus:ring-jubilee-red transition-all"
             />
           </div>
@@ -73,20 +79,36 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
               <Lock className="w-3.5 h-3.5 text-slate-400" />
               Password
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-jubilee-red focus:ring-1 focus:ring-jubilee-red transition-all"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="officer_password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                autoComplete="new-password"
+                className="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-jubilee-red focus:ring-1 focus:ring-jubilee-red transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors"
+                title={showPassword ? 'Hide Password' : 'Show Password'}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Preset credentials helper hint */}
           <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/80 text-[11px] text-slate-600 flex items-center gap-2">
             <KeyRound className="w-4 h-4 text-jubilee-red shrink-0" />
             <div>
-              <span className="font-bold text-slate-800 block">Default Seeded Officer:</span>
+              <span className="font-bold text-slate-800 block">Seeded Officer Credentials:</span>
               <span>Username: <code className="bg-slate-200/70 px-1 rounded text-slate-900 font-mono">officer@jubilee.com</code> | Password: <code className="bg-slate-200/70 px-1 rounded text-slate-900 font-mono">Jubilee2026!</code></span>
             </div>
           </div>
