@@ -104,15 +104,6 @@ export default function LoginModal({ isOpen, onClose, onLogin }) {
             </div>
           </div>
 
-          {/* Preset credentials helper hint */}
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/80 text-[11px] text-slate-600 flex items-center gap-2">
-            <KeyRound className="w-4 h-4 text-jubilee-red shrink-0" />
-            <div>
-              <span className="font-bold text-slate-800 block">Seeded Officer Credentials:</span>
-              <span>Username: <code className="bg-slate-200/70 px-1 rounded text-slate-900 font-mono">officer@jubilee.com</code> | Password: <code className="bg-slate-200/70 px-1 rounded text-slate-900 font-mono">Jubilee2026!</code></span>
-            </div>
-          </div>
-
           <div className="pt-2 flex items-center justify-end gap-3">
             <button
               type="button"

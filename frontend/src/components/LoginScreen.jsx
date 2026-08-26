@@ -120,15 +120,6 @@ export default function LoginScreen({ onLogin }) {
               </div>
             </div>
 
-            {/* Seeded Credentials Hint */}
-            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 text-[11px] text-slate-600 flex items-center gap-2.5">
-              <KeyRound className="w-4 h-4 text-jubilee-red shrink-0" />
-              <div>
-                <span className="font-bold text-slate-800 block">Default Seeded Officer Credentials:</span>
-                <span>Username: <code className="bg-slate-200/70 px-1 rounded text-slate-900 font-mono font-semibold">officer@jubilee.com</code> | Password: <code className="bg-slate-200/70 px-1 rounded text-slate-900 font-mono font-semibold">Jubilee2026!</code></span>
-              </div>
-            </div>
-
             <button
               type="submit"
               disabled={isSubmitting}
