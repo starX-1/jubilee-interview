@@ -6,6 +6,8 @@ import CreateClaimModal from './components/CreateClaimModal';
 import ClaimDetailModal from './components/ClaimDetailModal';
 import Toast from './components/Toast';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
 export default function App() {
   const [claims, setClaims] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +35,7 @@ export default function App() {
     setError(null);
 
     try {
-      const response = await fetch('/api/claims');
+      const response = await fetch(`${API_BASE_URL}/api/claims`);
       const json = await response.json();
 
       if (!response.ok || !json.success) {
@@ -60,7 +62,7 @@ export default function App() {
    */
   const handleCreateClaim = async (claimData) => {
     try {
-      const response = await fetch('/api/claims', {
+      const response = await fetch(`${API_BASE_URL}/api/claims`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -89,7 +91,7 @@ export default function App() {
    */
   const handleUpdateStatus = async (id, newStatus) => {
     try {
-      const response = await fetch(`/api/claims/${id}/status`, {
+      const response = await fetch(`${API_BASE_URL}/api/claims/${id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
