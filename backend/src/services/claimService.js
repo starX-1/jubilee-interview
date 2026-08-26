@@ -33,7 +33,7 @@ class ClaimService {
   }
 
   /**
-   * Get all claims with filters
+   * Get all claims with pagination & filters
    */
   static async getClaims(filters) {
     return await ClaimModel.findAll(filters);

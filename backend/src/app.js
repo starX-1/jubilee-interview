@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const db = require('./config/db');
 const claimRoutes = require('./routes/claimRoutes');
+const authRoutes = require('./routes/authRoutes');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -33,6 +34,7 @@ app.get('/api/health', async (req, res, next) => {
 });
 
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/claims', claimRoutes);
 
 // Error Middleware

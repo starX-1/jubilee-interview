@@ -1,4 +1,6 @@
+const bcrypt = require('bcryptjs');
 const db = require('./config/db');
+const { OFFICER_USERNAME, OFFICER_PASSWORD } = require('./config/env');
 
 const sampleClaims = [
   {
@@ -58,6 +60,22 @@ async function seed() {
     console.log('Initializing database schema...');
     await db.initDb();
 
+    console.log(`Seeding Claims Officer account from environment... (${OFFICER_USERNAME})`);
+    const passwordHash = await bcrypt.hash(OFFICER_PASSWORD, 10);
+
+    await db.query(
+      `INSERT INTO officers (username, password_hash, full_name, role)
+       VALUES ($1, $2, $3, 'CLAIMS_OFFICER')
+       ON CONFLICT (username)
+       DO UPDATE SET
+         password_hash = EXCLUDED.password_hash,
+         full_name = EXCLUDED.full_name,
+         updated_at = CURRENT_TIMESTAMP`,
+      [OFFICER_USERNAME, passwordHash, 'Senior Claims Officer']
+    );
+
+    console.log('Claims Officer account seeded successfully.');
+
     console.log('Seeding sample insurance claims...');
     for (const claim of sampleClaims) {
       await db.query(
@@ -85,7 +103,7 @@ async function seed() {
         ]
       );
     }
-    console.log('Database seeded successfully with sample claims.');
+    console.log('Database seeded successfully with officer account & claims sample data.');
     process.exit(0);
   } catch (error) {
     console.error('Error seeding database:', error);

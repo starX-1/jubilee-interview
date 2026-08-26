@@ -4,6 +4,7 @@ import StatsCards from './components/StatsCards';
 import ClaimsList from './components/ClaimsList';
 import CreateClaimModal from './components/CreateClaimModal';
 import ClaimDetailModal from './components/ClaimDetailModal';
+import LoginModal from './components/LoginModal';
 import Toast from './components/Toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -13,6 +14,19 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
+
+  // Officer Auth State
+  const [officer, setOfficer] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('officer_token') || null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // Pagination & Filter state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedType, setSelectedType] = useState('All Types');
+  const [pagination, setPagination] = useState({ page: 1, limit: 5, total: 0, totalPages: 1 });
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -25,8 +39,63 @@ export default function App() {
     setToast({ message, type });
   };
 
+  // Restore Officer session on startup if token exists
+  useEffect(() => {
+    if (token) {
+      fetch(`${API_BASE_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.officer) {
+            setOfficer(data.officer);
+          } else {
+            handleLogout();
+          }
+        })
+        .catch(() => handleLogout());
+    }
+  }, [token]);
+
   /**
-   * Fetch all claims from API
+   * Handle Officer Login
+   */
+  const handleLogin = async (username, password) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const json = await response.json();
+
+      if (!response.ok || !json.success) {
+        throw new Error(json.error || 'Login failed');
+      }
+
+      setToken(json.token);
+      setOfficer(json.officer);
+      localStorage.setItem('officer_token', json.token);
+      showToast(`Welcome back, ${json.officer.fullName}! Logged in successfully.`, 'success');
+    } catch (err) {
+      console.error('Login error:', err);
+      throw err;
+    }
+  };
+
+  /**
+   * Handle Officer Logout
+   */
+  const handleLogout = () => {
+    setToken(null);
+    setOfficer(null);
+    localStorage.removeItem('officer_token');
+    showToast('Logged out of Claims Officer session.', 'success');
+  };
+
+  /**
+   * Fetch Claims with pagination and filters
    */
   const fetchClaims = useCallback(async (quiet = false) => {
     if (!quiet) setIsLoading(true);
@@ -35,7 +104,17 @@ export default function App() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/claims`);
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+      if (selectedStatus !== 'ALL') params.append('status', selectedStatus);
+      if (selectedType !== 'All Types') params.append('claimType', selectedType);
+      if (searchQuery.trim() !== '') params.append('search', searchQuery.trim());
+
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(`${API_BASE_URL}/api/claims?${params.toString()}`, { headers });
       const json = await response.json();
 
       if (!response.ok || !json.success) {
@@ -43,6 +122,12 @@ export default function App() {
       }
 
       setClaims(json.data || []);
+      setPagination({
+        page: json.page || 1,
+        limit: json.limit || 5,
+        total: json.total || 0,
+        totalPages: json.totalPages || 1
+      });
     } catch (err) {
       console.error('Error fetching claims:', err);
       setError(err.message || 'Unable to connect to Jubilee Claims API service');
@@ -51,22 +136,28 @@ export default function App() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [page, limit, selectedStatus, selectedType, searchQuery, token]);
 
   useEffect(() => {
     fetchClaims();
   }, [fetchClaims]);
+
+  // Reset to page 1 when search or filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedStatus, selectedType]);
 
   /**
    * Handle Create Claim
    */
   const handleCreateClaim = async (claimData) => {
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const response = await fetch(`${API_BASE_URL}/api/claims`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify(claimData)
       });
 
@@ -78,7 +169,6 @@ export default function App() {
 
       showToast(`Claim ${json.data.claimNumber} captured successfully with status SUBMITTED!`, 'success');
       setIsCreateModalOpen(false);
-      // Refresh claims list
       await fetchClaims(true);
     } catch (err) {
       console.error('Create claim error:', err);
@@ -91,11 +181,12 @@ export default function App() {
    */
   const handleUpdateStatus = async (id, newStatus) => {
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const response = await fetch(`${API_BASE_URL}/api/claims/${id}/status`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify({ status: newStatus })
       });
 
@@ -107,12 +198,10 @@ export default function App() {
 
       showToast(`Status updated to ${newStatus} for claim ${json.data.claimNumber}`, 'success');
 
-      // Update local claim object if open in modal
       if (selectedClaim && selectedClaim.id === id) {
         setSelectedClaim(json.data);
       }
 
-      // Refresh list
       await fetchClaims(true);
     } catch (err) {
       console.error('Status update error:', err);
@@ -122,15 +211,18 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-jubilee-lightBg flex flex-col font-sans">
-      {/* Navbar Header */}
+    <div className="min-h-screen bg-jubilee-lightBg flex flex-col font-sans text-slate-800">
+      {/* Header */}
       <Header
+        officer={officer}
+        onOpenLoginModal={() => setIsLoginModalOpen(true)}
+        onLogout={handleLogout}
         onOpenCreateModal={() => setIsCreateModalOpen(true)}
         onRefresh={() => fetchClaims(true)}
         isRefreshing={isRefreshing}
       />
 
-      {/* Main Page Container */}
+      {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Banner Welcome */}
         <div className="mb-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -143,9 +235,17 @@ export default function App() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {!officer && (
+              <button
+                onClick={() => setIsLoginModalOpen(true)}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
+              >
+                Officer Login
+              </button>
+            )}
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-jubilee-red hover:bg-jubilee-redHover text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-lg transition-all transform active:scale-95 whitespace-nowrap"
+              className="bg-jubilee-red hover:bg-jubilee-redHover text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-lg transition-all transform active:scale-95 whitespace-nowrap cursor-pointer"
             >
               + New Claim Form
             </button>
@@ -155,17 +255,32 @@ export default function App() {
         {/* Overview Stats Cards */}
         <StatsCards claims={claims} />
 
-        {/* Claims Table List */}
+        {/* Paginated Claims List */}
         <ClaimsList
           claims={claims}
           isLoading={isLoading}
           error={error}
+          pagination={pagination}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
+          selectedType={selectedType}
+          setSelectedType={setSelectedType}
+          onPageChange={(newPage) => setPage(newPage)}
+          onLimitChange={(newLimit) => { setLimit(newLimit); setPage(1); }}
           onSelectClaim={(claim) => setSelectedClaim(claim)}
           onOpenCreateModal={() => setIsCreateModalOpen(true)}
         />
       </main>
 
       {/* Modals & Drawers */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLogin={handleLogin}
+      />
+
       <CreateClaimModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}

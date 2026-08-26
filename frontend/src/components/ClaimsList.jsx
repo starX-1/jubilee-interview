@@ -1,20 +1,28 @@
-import React, { useState } from 'react';
-import { Search, Eye, Filter, Car, HeartPulse, Plane, Home, Shield, AlertCircle } from 'lucide-react';
+import React from 'react';
+import { Search, Eye, Filter, Car, HeartPulse, Plane, Home, Shield, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
 const CLAIM_TYPES = ['All Types', 'Motor', 'Health', 'Travel', 'Property', 'Other'];
 const STATUSES = ['ALL', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'PAID'];
+const LIMIT_OPTIONS = [5, 10, 25, 50];
 
 export default function ClaimsList({
   claims,
   isLoading,
   error,
+  pagination,
+  searchQuery,
+  setSearchQuery,
+  selectedStatus,
+  setSelectedStatus,
+  selectedType,
+  setSelectedType,
+  onPageChange,
+  onLimitChange,
   onSelectClaim,
   onOpenCreateModal
 }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('ALL');
-  const [selectedType, setSelectedType] = useState('All Types');
+  const { page = 1, limit = 5, total = 0, totalPages = 1 } = pagination || {};
 
   // Helper for claim type icon
   const getTypeIcon = (type) => {
@@ -56,22 +64,8 @@ export default function ClaimsList({
     }
   };
 
-  // Client-side filtering
-  const filteredClaims = claims.filter(claim => {
-    const matchesSearch =
-      searchQuery.trim() === '' ||
-      claim.claimNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      claim.policyNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      claim.customerName?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesStatus =
-      selectedStatus === 'ALL' || claim.status === selectedStatus;
-
-    const matchesType =
-      selectedType === 'All Types' || claim.claimType === selectedType;
-
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  const startRecord = total > 0 ? (page - 1) * limit + 1 : 0;
+  const endRecord = Math.min(page * limit, total);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -105,34 +99,39 @@ export default function ClaimsList({
               ))}
             </select>
           </div>
+
+          {/* Items Per Page Selector */}
+          <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700">
+            <span className="font-medium text-slate-500">Show:</span>
+            <select
+              value={limit}
+              onChange={(e) => onLimitChange(Number(e.target.value))}
+              className="bg-transparent font-semibold focus:outline-none text-slate-800 cursor-pointer"
+            >
+              {LIMIT_OPTIONS.map(opt => (
+                <option key={opt} value={opt}>{opt} per page</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Status Tab Navigation */}
       <div className="flex overflow-x-auto border-b border-slate-100 bg-slate-50/30 px-4 pt-2 no-scrollbar">
         {STATUSES.map(status => {
-          const count = status === 'ALL'
-            ? claims.length
-            : claims.filter(c => c.status === status).length;
-
           const isActive = selectedStatus === status;
 
           return (
             <button
               key={status}
               onClick={() => setSelectedStatus(status)}
-              className={`px-3.5 py-2 text-xs font-semibold whitespace-nowrap border-b-2 transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-2 text-xs font-semibold whitespace-nowrap border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
                 isActive
                   ? 'border-jubilee-red text-jubilee-red font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
               }`}
             >
               <span>{status.replace('_', ' ')}</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                isActive ? 'bg-jubilee-red/10 text-jubilee-red' : 'bg-slate-200 text-slate-600'
-              }`}>
-                {count}
-              </span>
             </button>
           );
         })}
@@ -156,7 +155,7 @@ export default function ClaimsList({
           <tbody className="divide-y divide-slate-100 text-sm">
             {isLoading ? (
               // Loading Skeleton
-              Array.from({ length: 5 }).map((_, idx) => (
+              Array.from({ length: limit }).map((_, idx) => (
                 <tr key={idx} className="animate-pulse">
                   <td className="py-4 px-4 sm:px-6"><div className="h-4 bg-slate-200 rounded w-24"></div></td>
                   <td className="py-4 px-4"><div className="h-4 bg-slate-200 rounded w-28"></div></td>
@@ -179,7 +178,7 @@ export default function ClaimsList({
                   </div>
                 </td>
               </tr>
-            ) : filteredClaims.length === 0 ? (
+            ) : claims.length === 0 ? (
               // Empty State
               <tr>
                 <td colSpan="8" className="py-12 px-4 text-center">
@@ -195,7 +194,7 @@ export default function ClaimsList({
                     </p>
                     <button
                       onClick={onOpenCreateModal}
-                      className="text-xs bg-jubilee-red hover:bg-jubilee-redHover text-white px-3.5 py-2 rounded-lg font-semibold transition-colors"
+                      className="text-xs bg-jubilee-red hover:bg-jubilee-redHover text-white px-3.5 py-2 rounded-lg font-semibold transition-colors cursor-pointer"
                     >
                       + Create First Claim
                     </button>
@@ -204,7 +203,7 @@ export default function ClaimsList({
               </tr>
             ) : (
               // Claims Table Content
-              filteredClaims.map((claim) => (
+              claims.map((claim) => (
                 <tr
                   key={claim.id}
                   className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
@@ -252,7 +251,7 @@ export default function ClaimsList({
                   <td className="py-3.5 px-4 sm:px-6 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => onSelectClaim(claim)}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-jubilee-navy hover:text-jubilee-red bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 px-3 py-1.5 rounded-lg transition-all"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-jubilee-navy hover:text-jubilee-red bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>View</span>
@@ -265,10 +264,36 @@ export default function ClaimsList({
         </table>
       </div>
 
-      {/* Footer Info */}
-      <div className="p-4 border-t border-slate-100 bg-slate-50/50 text-xs text-slate-500 flex justify-between items-center">
-        <span>Showing <strong>{filteredClaims.length}</strong> of <strong>{claims.length}</strong> total claims</span>
-        <span className="text-[11px] text-slate-400">Jubilee Insurance Kenya • Claims Operations</span>
+      {/* PAGINATION CONTROLS FOOTER */}
+      <div className="p-4 border-t border-slate-100 bg-slate-50/50 text-xs text-slate-600 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div>
+          Showing <strong className="text-slate-900">{startRecord}</strong> to <strong className="text-slate-900">{endRecord}</strong> of <strong className="text-slate-900">{total}</strong> total claims
+        </div>
+
+        {/* Page navigation buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onPageChange(page - 1)}
+            disabled={page <= 1 || isLoading}
+            className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white text-slate-700 transition-all flex items-center gap-1 font-semibold cursor-pointer disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Prev</span>
+          </button>
+
+          <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg font-bold text-jubilee-navy">
+            Page {page} of {totalPages}
+          </span>
+
+          <button
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages || isLoading}
+            className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white text-slate-700 transition-all flex items-center gap-1 font-semibold cursor-pointer disabled:cursor-not-allowed"
+          >
+            <span className="hidden sm:inline">Next</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

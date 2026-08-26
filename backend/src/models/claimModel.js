@@ -64,10 +64,43 @@ class ClaimModel {
   }
 
   /**
-   * Find all claims with optional status, claimType, or search term
+   * Find all claims with pagination (page, limit) and optional status, claimType, or search term
    */
-  static async findAll({ status, claimType, search } = {}) {
-    let queryText = `
+  static async findAll({ page = 1, limit = 5, status, claimType, search } = {}) {
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 5));
+    const offset = (pageNum - 1) * limitNum;
+
+    let whereClause = ` WHERE 1=1`;
+    const params = [];
+
+    if (status && ALLOWED_STATUSES.includes(status.toUpperCase())) {
+      params.push(status.toUpperCase());
+      whereClause += ` AND status = $${params.length}`;
+    }
+
+    if (claimType && ALLOWED_TYPES.includes(claimType)) {
+      params.push(claimType);
+      whereClause += ` AND claim_type = $${params.length}`;
+    }
+
+    if (search && search.trim() !== '') {
+      params.push(`%${search.trim()}%`);
+      whereClause += ` AND (
+        claim_number ILIKE $${params.length} OR 
+        policy_number ILIKE $${params.length} OR 
+        customer_name ILIKE $${params.length}
+      )`;
+    }
+
+    // 1. Get total count
+    const countQuery = `SELECT COUNT(*) AS total FROM claims${whereClause}`;
+    const countResult = await db.query(countQuery, params);
+    const total = parseInt(countResult.rows[0].total, 10);
+
+    // 2. Fetch paginated rows
+    const dataParams = [...params, limitNum, offset];
+    const dataQuery = `
       SELECT 
         id, 
         claim_number AS "claimNumber", 
@@ -81,34 +114,20 @@ class ClaimModel {
         created_at AS "createdAt", 
         updated_at AS "updatedAt"
       FROM claims
-      WHERE 1=1
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}
     `;
 
-    const params = [];
+    const dataResult = await db.query(dataQuery, dataParams);
 
-    if (status && ALLOWED_STATUSES.includes(status.toUpperCase())) {
-      params.push(status.toUpperCase());
-      queryText += ` AND status = $${params.length}`;
-    }
-
-    if (claimType && ALLOWED_TYPES.includes(claimType)) {
-      params.push(claimType);
-      queryText += ` AND claim_type = $${params.length}`;
-    }
-
-    if (search && search.trim() !== '') {
-      params.push(`%${search.trim()}%`);
-      queryText += ` AND (
-        claim_number ILIKE $${params.length} OR 
-        policy_number ILIKE $${params.length} OR 
-        customer_name ILIKE $${params.length}
-      )`;
-    }
-
-    queryText += ` ORDER BY created_at DESC`;
-
-    const result = await db.query(queryText, params);
-    return result.rows;
+    return {
+      claims: dataResult.rows,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum) || 1
+    };
   }
 
   /**
