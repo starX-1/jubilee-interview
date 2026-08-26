@@ -1,16 +1,14 @@
-@tailwindcss base;
-@tailwindcss components;
-@tailwindcss utilities;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@layer base {
-  body {
-    background-color: #F8FAFC;
-    color: #1E293B;
-    font-family: 'Inter', sans-serif;
-  }
+body {
+  background-color: #F8FAFC;
+  color: #1E293B;
+  font-family: 'Inter', sans-serif;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
