@@ -1,17 +1,10 @@
 const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../.env') });
-
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  console.error('CRITICAL: DATABASE_URL environment variable is missing.');
-  process.exit(1);
-}
+const { DATABASE_URL } = require('./env');
 
 const pool = new Pool({
-  connectionString,
+  connectionString: DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
   }
@@ -22,7 +15,7 @@ pool.on('error', (err) => {
 });
 
 /**
- * Executes automatic schema migration on startup.
+ * Initializes database schema on startup
  */
 async function initDb() {
   const client = await pool.connect();
@@ -30,7 +23,7 @@ async function initDb() {
     const schemaPath = path.join(__dirname, 'schema.sql');
     const sql = fs.readFileSync(schemaPath, 'utf8');
     await client.query(sql);
-    console.log('PostgreSQL database schema initialized successfully (Neon DB).');
+    console.log('PostgreSQL database schema verified & initialized successfully (Neon DB).');
   } catch (error) {
     console.error('Failed to initialize database schema:', error);
     throw error;

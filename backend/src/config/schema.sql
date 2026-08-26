@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS claims (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Index for fast status & search filtering
 CREATE INDEX IF NOT EXISTS idx_claims_status ON claims(status);
 CREATE INDEX IF NOT EXISTS idx_claims_claim_number ON claims(claim_number);
 CREATE INDEX IF NOT EXISTS idx_claims_customer_name ON claims(customer_name);

@@ -1,12 +1,12 @@
 {
   "name": "jubilee-insurance-backend",
   "version": "1.0.0",
-  "description": "Backend REST API for Jubilee Insurance Claims Tracker",
-  "main": "index.js",
+  "description": "Layered REST API for Jubilee Insurance Claims Tracker",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js",
-    "seed": "node db/seed.js"
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/seed.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
